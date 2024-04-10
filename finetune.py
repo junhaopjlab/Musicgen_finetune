@@ -3,7 +3,7 @@ from datasets import load_dataset
 from transformers import MusicgenForConditionalGeneration, Trainer, TrainingArguments, MusicgenProcessor, AutoProcessor, AutoTokenizer, MusicgenDecoderConfig
 import os, json, scipy, torchaudio, torch
 from torch.optim import Adam
-from audiocraft.data.music_dataset import MusicDataset
+
 
 
 processor = AutoProcessor.from_pretrained('facebook/musicgen-medium')
