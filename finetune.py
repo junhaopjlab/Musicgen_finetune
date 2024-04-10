@@ -118,7 +118,7 @@ validloader = DataLoader(debug_dataset, batch_size=2, shuffle=False, collate_fn=
 audio=debug_dataset[0]["audio"][:len(debug_dataset[0]["audio"])//8]
 
 inputs = processor(
-    text=["80s pop track with bassy drums and synth", "90s rock song with loud guitars and heavy drums"],
+    text=["80s pop track with bassy drums and synth"],
     audio=audio,
     padding=True,
     return_tensors="pt",
