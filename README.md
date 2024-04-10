@@ -20,6 +20,7 @@ finetune.py文件给出了尝试微调MusicGen的代码。line 134
 
 可能是musicgen内部代码的问题，另外，除了MusicgenForConditionalGeneration类模型带有loss，其余类的loss均设置为None。
 查找到参数self.config.vocab_size=2048,直接将该位置的值改为2048，看看能否跑通
+
          loss = loss_fct(logits.view(-1, 2048), labels.view(-1))
 
  但得到报错ValueError: Expected input batch_size (4) to match target batch_size (12).形状不匹配
