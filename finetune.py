@@ -15,12 +15,28 @@ from audiocraft.modules.conditioners import ClassifierFreeGuidanceDropout
 
 import os
 
+# audio_id = artist_name+'/'+song_name+'/'+slice_id
+# def wandhi_zh_paths_map(audio_id):
+#     paths ={
+#         'mp3': os.path.join(SPLIT_PATH, audio_id +'.mp3'), #label
+#         'acc': os.path.join(API_PATH, audio_id+'_acc.wav'),
+#         'vocal': os.path.join(API_PATH, audio_id+'.wav'), #input melody
+#         'midi': os.path.join(API_PATH, audio_id+'_wav2midi.json'),
+#         'lyric_txt': os.path.join(SPLIT_PATH, audio_id +'.txt'),
+#         'lyric_time': os.path.join(API_PATH, audio_id+'_lyrictime.txt'),
+#         'dtw':os.path.join(DTW_PATH, audio_id+'_align.json'),
+#         'ace_file': os.path.join(ACE_PATH, audio_id+'.aces'),
+#         'ace_audio': os.path.join(ACE_PATH, audio_id+'.wav'),
+#     }  
+#     return paths
+#!! paths['vocal'] 和 paths['mp3]不一定同时都存在 需判断一下
+
 class MyAudioDataset(Dataset):
     def __init__(self, data_dir, no_label=False):
         self.data_dir = data_dir
         self.data_map = []
 
-        condition_datadir = 'MFA_corpus/'
+        condition_datadir = 'API' #'MFA_corpus/'
         label_datadir = 'split_10s/'
 
         artist_files = os.listdir(data_dir + '/' + label_datadir)
