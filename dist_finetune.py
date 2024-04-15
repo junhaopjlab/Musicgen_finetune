@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 import random
-import wandb
+# import wandb
 import argparse
 
 from torch.utils.data import Dataset
@@ -18,6 +18,7 @@ import os
 
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group
 
 class MyAudioDataset(Dataset):
     def __init__(self, data_dir, no_label=False):
@@ -131,10 +132,11 @@ def train(
 ):
     
     local_rank = int(os.environ['LOCAL_RANK'])
-    print(f"Start running basic DDP example on rank {rank}.")
+    print(f"Start running basic DDP example on rank {local_rank}.")
+    torch.cuda.set_device(local_rank)
 
-    if local_rank == 0 and use_wandb:
-        run = wandb.init(project="audiocraft")
+    # if local_rank == 0 and use_wandb:
+    #     run = wandb.init(project="audiocraft")
 
     
     model = MusicGen.get_pretrained(model_id)
@@ -142,14 +144,13 @@ def train(
 
     model.lm = model.lm.to(local_rank)
     model.lm = DDP(model.lm, device_ids=[local_rank], output_device=local_rank)
+    model.lm = model.lm.module #??
 
 
     dataset = MyAudioDataset(dataset_path, no_label=no_label)
     train_sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, sampler=train_sampler)
 
-    
-    # model.lm = model.lm.module
 
     learning_rate = lr
     model.lm.train()
@@ -340,7 +341,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_path', type=str, required=True)
     parser.add_argument('--model_id', type=str, required=False, default='facebook/musicgen-melody')
     parser.add_argument('--lr', type=float, required=False, default=1e-5)
-    parser.add_argument('--epochs', type=int, required=False, default=10)
+    parser.add_argument('--epochs', type=int, required=False, default=2)
     parser.add_argument('--use_wandb', type=int, required=False, default=0)
     parser.add_argument('--save_step', type=int, required=False, default=None)
     parser.add_argument('--no_label', type=int, required=False, default=0)
@@ -348,7 +349,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, required=False, default=1e-5)
     parser.add_argument('--grad_acc', type=int, required=False, default=2)
     parser.add_argument('--warmup_steps', type=int, required=False, default=4000)
-    parser.add_argument('--batch_size', type=int, required=False, default=16)
+    parser.add_argument('--batch_size', type=int, required=False, default=8)
     parser.add_argument('--use_cfg', type=int, required=False, default=0)
     parser.add_argument('--num_workers', type=int, required=False, default=2)
     args = parser.parse_args()
