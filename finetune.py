@@ -1,161 +1,289 @@
-from torch.utils.data import Dataset, DataLoader
-from datasets import load_dataset
-from transformers import MusicgenForConditionalGeneration, Trainer, TrainingArguments, MusicgenProcessor, AutoProcessor, AutoTokenizer, MusicgenDecoderConfig
-import os, json, scipy, torchaudio, torch
-from torch.optim import Adam
+import torchaudio
+from audiocraft.models import MusicGen
+from transformers import get_scheduler
+import torch
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+import random
+import wandb
 
+from torch.utils.data import Dataset
 
+from audiocraft.modules.conditioners import ClassifierFreeGuidanceDropout
 
-processor = AutoProcessor.from_pretrained('facebook/musicgen-medium')
-#Encodec_processor = AutoProcessor.from_pretrained('facebook/encodec_32khz')
-musicgen_config = MusicgenDecoderConfig.from_pretrained("facebook/musicgen-medium")
-model = MusicgenForConditionalGeneration.from_pretrained('facebook/musicgen-medium')
-#Encodec_model = AutoModel.from_pretrained('facebook/encodec_32khz')
-tokenizer = AutoTokenizer.from_pretrained('facebook/musicgen-medium')
+import os
 
+class MyAudioDataset(Dataset):
+    def __init__(self, data_dir, no_label=False):
+        self.data_dir = data_dir
+        self.data_map = []
 
-def convert_audio_channels(wav: torch.Tensor) -> torch.Tensor:
-    """Convert audio to the given number of channels.
+        condition_datadir = 'MFA_corpus/'
+        label_datadir = 'split_10s/'
 
-    Args:
-        wav (torch.Tensor): Audio wave of shape [B, C, T].
-        channels (int): Expected number of channels as output.
-    Returns:
-        torch.Tensor: Downmixed or unchanged audio wave [B, C, T].
-    """
-    *shape, src_channels, length = wav.shape
+        artist_files = os.listdir(data_dir + '/' + label_datadir)
+        for artist in artist_files:
+            song_files = os.listdir(data_dir + '/' + label_datadir + artist)
+            for song_file in song_files:
+                song_splitfiles = os.listdir(data_dir + '/' + label_datadir + artist + '/' + song_file)
+                song_splitfiles = [file for file in song_splitfiles if file.endswith(".mp3")]
+                names = [file[:-4] for file in song_splitfiles]
+                for name in names:
+                    self.data_map.append(
+                        {
+                            "audio": data_dir + '/' + condition_datadir + artist + '/' + song_file + '/' + name + '.wav',
+                            "label": data_dir + '/' + label_datadir + artist + '/' + song_file + '/' + name + '.mp3'
+                        }
+                    )
 
-    return wav.mean(dim=-2)
-
-class mytraindataset(Dataset):
-    def __init__(self) -> None:
-        super().__init__()
-        path = 'dataset/train/'
-        files = os.listdir(path)
-        json_files = [file for file in files if file.endswith('.json')]
-        file_names = [file[: -5] for file in json_files]
-        self.data = []
-        for name in file_names:
-            json_path = path + name + '.json'
-            wav_path = path + name + '.wav'
-            with open(json_path, 'r') as json_file:
-                data = json.load(json_file)
-            audio, sr = torchaudio.load(wav_path)
-            audio = convert_audio_channels(audio) 
-            data["audio"] = audio
-            self.data.append(data)
-    
-    def __getitem__(self, index):
-        return self.data[index]
-    
     def __len__(self):
-        return len(self.data)
-    
-class myvaliddataset(Dataset):
-    def __init__(self) -> None:
-        super().__init__()
-        path = 'dataset/valid/'
-        files = os.listdir(path)
-        json_files = [file for file in files if file.endswith('.json')]
-        file_names = [file[: -5] for file in json_files]
-        self.data = []
-        for name in file_names:
-            json_path = path + name + '.json'
-            wav_path = path + name + '.wav'
-            with open(json_path, 'r') as json_file:
-                data = json.load(json_file)
-            audio, sr = torchaudio.load(wav_path)
-            audio = convert_audio_channels(audio) 
-            data["audio"] = audio
-            self.data.append(data)
-    
-    def __getitem__(self, index):
-        return self.data[index]
-    
-    def __len__(self):
-        return len(self.data)
+        return len(self.data_map)
 
-class mydebugdataset(Dataset):
-    def __init__(self) -> None:
-        super().__init__()
-        path = 'dataset/debug/'
-        files = os.listdir(path)
-        json_files = [file for file in files if file.endswith('.json')]
-        file_names = [file[: -5] for file in json_files]
-        self.data = []
-        for name in file_names:
-            json_path = path + name + '.json'
-            wav_path = path + name + '.wav'
-            with open(json_path, 'r') as json_file:
-                data = json.load(json_file)
-            audio, sr = torchaudio.load(wav_path)
-            audio = convert_audio_channels(audio) 
-            data["audio"] = audio
-            self.data.append(data)
-    
-    def __getitem__(self, index):
-        return self.data[index]
-    
-    def __len__(self):
-        return len(self.data)
+    def __getitem__(self, idx):
+        data = self.data_map[idx]
+        audio = data["audio"]
+        label = data["label"]
+
+        return audio, label
+        
+def count_nans(tensor):
+    nan_mask = torch.isnan(tensor)
+    num_nans = torch.sum(nan_mask).item()
+    return num_nans
 
 
-#train_dataset = mytraindataset()
-#eval_dataset = myvaliddataset()
-debug_dataset = mydebugdataset()
+def preprocess_audio(audio_path, model: MusicGen, duration: int = 10):
+    wav, sr = torchaudio.load(audio_path)
+    wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
+    wav = wav.mean(dim=0, keepdim=True)
+    if wav.shape[1] < model.sample_rate * duration:
+        return None
+    end_sample = int(model.sample_rate * duration)
+    start_sample = 0
+    wav = wav[:, start_sample : start_sample + end_sample]
 
-def collate_func(batch):
-    texts, audios = [], []
-    for item in batch:
-        texts.append(item["description"])
-        audios.append(item["audio"].numpy())
-        inputs = processor(audio=audios, sampling_rate=32000, text=texts, padding=True, return_tensors="pt")
-    return inputs
+    assert wav.shape[0] == 1
 
-trainloader = DataLoader(debug_dataset, batch_size=2, shuffle=True, collate_fn=collate_func)
-validloader = DataLoader(debug_dataset, batch_size=2, shuffle=False, collate_fn=collate_func)
+    wav = wav.cuda()
+    wav = wav.unsqueeze(1)
 
-audio=debug_dataset[0]["audio"][:len(debug_dataset[0]["audio"])//8]
+    with torch.no_grad():
+        gen_audio = model.compression_model.encode(wav)
 
-inputs = processor(
-    text=["80s pop track with bassy drums and synth"],
-    audio=audio,
-    padding=True,
-    return_tensors="pt",
-)
+    codes, scale = gen_audio
 
-pad_token_id = model.generation_config.pad_token_id
-decoder_input_ids = (
-    torch.ones((inputs.input_ids.shape[0] * model.decoder.num_codebooks, 1), dtype=torch.long)
-    * pad_token_id
-)
+    assert scale is None
 
-logits = model(**inputs, decoder_input_ids=decoder_input_ids).logits
-loss = model(**inputs, decoder_input_ids=decoder_input_ids, labels=inputs["input_ids"]).loss
-print(logits)
-print(loss)
+    return codes
 
-'''
-if torch.cuda.is_available():
-    model = model.cuda()
+def preprocess_melody_wavs(audio_path, model:MusicGen, duration: int = 10):
+    wav, sr = torchaudio.load(audio_path)
+    wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
+    wav = wav.mean(dim=0, keepdim=True)
+    if wav.shape[1] < model.sample_rate * duration:
+        return None
+    end_sample = int(model.sample_rate * duration)
+    start_sample = 0
+    wav = wav[:, start_sample : start_sample + end_sample]
+    return wav
 
-optimizer = Adam(model.parameters(), lr=1e-4)
+def fixnan(tensor: torch.Tensor):
+    nan_mask = torch.isnan(tensor)
+    result = torch.where(nan_mask, torch.zeros_like(tensor), tensor)
 
-def train(epoch=3, log_step=100):
-    global_step = 0
-    for ep in range(epoch):
-        model.train()
-        for batch in trainloader:
-            if torch.cuda.is_available():
-                batch = {k: v.cuda() for k, v in batch.items()}
+    return result
+
+
+def one_hot_encode(tensor, num_classes=2048):
+    shape = tensor.shape
+    one_hot = torch.zeros((shape[0], shape[1], num_classes))
+
+    for i in range(shape[0]):
+        for j in range(shape[1]):
+            index = tensor[i, j].item()
+            one_hot[i, j, index] = 1
+
+    return one_hot
+
+
+def train(
+    dataset_path: str,
+    model_id: str,
+    lr: float,
+    epochs: int,
+    use_wandb: bool,
+    no_label: bool = False,
+    tune_text: bool = False,
+    save_step: int = 100,
+    grad_acc: int = 8,
+    use_scaler: bool = False,
+    weight_decay: float = 1e-5,
+    warmup_steps: int = 10,
+    batch_size: int = 10,
+    use_cfg: bool = False
+):
+    if use_wandb:
+        run = wandb.init(project="audiocraft")
+
+    model = MusicGen.get_pretrained(model_id)
+    model.lm = model.lm.to(torch.float32)  # important
+
+    dataset = MyAudioDataset(dataset_path, no_label=no_label)
+    train_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    learning_rate = lr
+    model.lm.train()
+
+    scaler = torch.cuda.amp.GradScaler()
+
+    if tune_text:
+        print("Tuning text")
+    else:
+        print("Tuning everything")
+
+    # from paper
+    optimizer = AdamW(
+        model.lm.condition_provider.parameters()
+        if tune_text
+        else model.lm.parameters(),
+        lr=learning_rate,
+        betas=(0.9, 0.95),
+        weight_decay=weight_decay,
+    )
+    scheduler = get_scheduler(
+        "cosine",
+        optimizer,
+        warmup_steps,
+        int(epochs * len(train_dataloader) / grad_acc),
+    )
+
+    criterion = nn.CrossEntropyLoss()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    num_epochs = epochs
+
+    save_step = save_step
+    save_models = False if save_step is None else True
+
+    save_path = "models/"
+
+    os.makedirs(save_path, exist_ok=True)
+
+    current_step = 0
+
+    for epoch in range(num_epochs):
+        for batch_idx, (audio, label) in enumerate(train_dataloader):
             optimizer.zero_grad()
-            output = model(**batch)
-            output.loss.backward()
-            optimizer.step()
-            if global_step % log_step == 0:
-                print(f"ep: {ep}, global_step: {global_step}, loss: {output.loss.item()}")
-            global_step += 1    
 
-train()
-print("done")
-'''
+            all_codes = []
+            melody_wavs = []
+            texts = []
+
+            # where audio and label are just paths
+            for melody, l in zip(audio, label):
+                inner_audio = preprocess_audio(l, model)  # returns tensor
+                if inner_audio is None:
+                    continue
+
+                if use_cfg:
+                    codes = torch.cat([inner_audio, inner_audio], dim=0)
+                else:
+                    codes = inner_audio
+
+                melody = preprocess_melody_wavs(melody, model)
+
+                all_codes.append(codes)
+                melody_wavs.append(melody)
+                texts.append("")
+
+            attributes, _ = model._prepare_tokens_and_attributes(texts, prompt=None, melody_wavs=melody_wavs)
+            conditions = attributes
+            if use_cfg:
+                null_conditions = ClassifierFreeGuidanceDropout(p=1.0)(conditions)
+                conditions = conditions + null_conditions
+            tokenized = model.lm.condition_provider.tokenize(conditions)
+            cfg_conditions = model.lm.condition_provider(tokenized)
+            condition_tensors = cfg_conditions
+
+            if len(all_codes) == 0:
+                continue
+
+            codes = torch.cat(all_codes, dim=0)
+
+            with torch.autocast(device_type="cuda", dtype=torch.float16):
+                lm_output = model.lm.compute_predictions(
+                    codes=codes, conditions=[], condition_tensors=condition_tensors
+                )
+
+                codes = codes[0]
+                logits = lm_output.logits[0]
+                mask = lm_output.mask[0]
+
+                codes = one_hot_encode(codes, num_classes=2048)
+
+                codes = codes.cuda()
+                logits = logits.cuda()
+                mask = mask.cuda()
+
+                mask = mask.view(-1)
+                masked_logits = logits.view(-1, 2048)[mask]
+                masked_codes = codes.view(-1, 2048)[mask]
+
+                loss = criterion(masked_logits, masked_codes)
+
+            current_step += 1 / grad_acc
+
+            # assert count_nans(masked_logits) == 0
+
+            (scaler.scale(loss) if use_scaler else loss).backward()
+
+            total_norm = 0
+            for p in model.lm.condition_provider.parameters():
+                try:
+                    param_norm = p.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+                except AttributeError:
+                    pass
+            total_norm = total_norm ** (1.0 / 2)
+
+            if use_wandb:
+                run.log(
+                    {
+                        "loss": loss.item(),
+                        "total_norm": total_norm,
+                    }
+                )
+
+            print(
+                f"Epoch: {epoch}/{num_epochs}, Batch: {batch_idx}/{len(train_dataloader)}, Loss: {loss.item()}"
+            )
+
+            if batch_idx % grad_acc != grad_acc - 1:
+                continue
+
+            if use_scaler:
+                scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.lm.parameters(), 0.5)
+
+            if use_scaler:
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                optimizer.step()
+            scheduler.step()
+
+            if save_models:
+                if (
+                    current_step == int(current_step)
+                    and int(current_step) % save_step == 0
+                ):
+                    torch.save(
+                        model.lm.state_dict(), f"{save_path}/lm_{current_step}.pt"
+                    )
+
+    torch.save(model.lm.state_dict(), f"{save_path}/lm_final.pt")
+
+
+
