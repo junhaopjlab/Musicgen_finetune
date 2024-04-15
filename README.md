@@ -1,26 +1,11 @@
 # Musicgen_finetune
 About how to finetune MusicGen
-# musicgen
-在musicgen文件夹下存放了transformers里关于musicgen的代码。
+
 # dataset
 数据集里存放了用来微调的数据
 
 # finetune
-finetune.py文件给出了尝试微调MusicGen的代码。line 134 
+finetune.py文件给出了尝试微调MusicGen的代码。
 
-        loss = model(**inputs, decoder_input_ids=decoder_input_ids, labels=inputs["input_ids"]).loss
-
-尝试去得到模型的loss，但报错AttributeError: 'MusicgenConfig' object has no attribute 'vocab_size'。追溯到musicgen/modeling_musicgen.py line 1891-1895.
-
-        loss = None
-        if labels is not None:
-            logits = decoder_outputs.logits if return_dict else decoder_outputs[0]
-            loss_fct = CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.config.vocab_size), labels.view(-1))
-
-可能是musicgen内部代码的问题，另外，除了MusicgenForConditionalGeneration类模型带有loss，其余类的loss均设置为None。
-查找到参数self.config.vocab_size=2048,直接将该位置的值改为2048，看看能否跑通
-
-         loss = loss_fct(logits.view(-1, 2048), labels.view(-1))
-
- 但得到报错ValueError: Expected input batch_size (4) to match target batch_size (12).形状不匹配
+里面数据集内容为一个纯人声旋律(audio)对应带伴奏歌曲片段(label)
+希望通过audio的纯人声condition生成带伴奏的歌曲。
