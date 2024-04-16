@@ -131,10 +131,11 @@ def train(
     num_workers: int = 1,
 ):
     
-    local_rank = int(os.environ['LOCAL_RANK'])
-    print(f"Start running basic DDP example on rank {local_rank}.")
+    local_rank = int(os.environ["LOCAL_RANK"])
+    rank = int(os.environ["RANK"])
+    print(f"[{os.getpid()}] (rank = {rank}, local_rank = {local_rank}) train worker starting...")
     torch.cuda.set_device(local_rank)
-
+    
     # if local_rank == 0 and use_wandb:
     #     run = wandb.init(project="audiocraft")
 
@@ -144,7 +145,7 @@ def train(
 
     model.lm = model.lm.to(local_rank)
     model.lm = DDP(model.lm, device_ids=[local_rank], output_device=local_rank)
-    model.lm = model.lm.module #??
+    model.lm = model.lm.module 
 
 
     dataset = MyAudioDataset(dataset_path, no_label=no_label)
@@ -277,7 +278,7 @@ def train(
                 )
 
             print(
-                f"Epoch: {epoch}/{num_epochs}, Batch: {batch_idx}/{len(train_dataloader)}, Loss: {loss.item()}"
+                f"(rank = {rank}, local_rank = {local_rank}) Epoch: {epoch}/{num_epochs}, Batch: {batch_idx}/{len(train_dataloader)}, Loss: {loss.item()}"
             )
 
             if batch_idx % grad_acc != grad_acc - 1:
@@ -308,8 +309,8 @@ def train(
 
 def ddp_setup():
     init_process_group(backend="nccl")
-    rank = int(os.environ['LOCAL_RANK'])
-    torch.cuda.set_device(rank)
+    
+  
 
 
 def main(args):   
