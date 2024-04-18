@@ -36,7 +36,7 @@ class MyAudioDataset(Dataset):
         label_dir = os.path.join( DATA_DIR, 'split_10s')
         with open(audio_ids_path, 'r', encoding='utf-8') as file:
             audio_ids_list = [line.strip() for line in file.readlines()]
-        for audio_id in audio_ids_list[:100]:
+        for audio_id in audio_ids_list:
             input_path = os.path.join(input_dir, audio_id+'.wav')
             label_path = os.path.join(label_dir, audio_id +'.mp3')
             if os.path.exists(input_path) and os.path.exists(label_path): 
