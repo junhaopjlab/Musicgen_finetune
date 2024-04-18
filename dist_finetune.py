@@ -175,6 +175,17 @@ def one_hot_encode(tensor, num_classes=2048):
 
     return one_hot
 
+def one_hot_encode_4d(tensor, num_classes=2048):
+    #[batch_size, num_codebooks, frames] -> [batch_size, num_codebooks, frames, num_classes]
+    shape = tensor.shape
+    one_hot = torch.zeros((shape[0], shape[1], shape[2], num_classes))
+
+    for b in range(shape[0]):
+        for i in range(shape[1]):
+            for j in range(shape[2]):
+                index = tensor[b, i, j].item()
+                one_hot[b, i, j, index] = 1
+    return one_hot
 
 def train(
     dataset_path: str,
@@ -271,7 +282,7 @@ def train(
             #获得label_wav的encodec code_id
             label_wavs = label_wavs.cuda()
             with torch.no_grad():
-                codes, scale = model.compression_model.encode(label_wavs)
+                codes, scale = model.compression_model.encode(label_wavs) #[batch_size, num_codebooks, frames]
             assert scale is None
 
             with torch.autocast(device_type="cuda", dtype=torch.float16):
@@ -279,15 +290,11 @@ def train(
                     codes=codes, conditions=[], condition_tensors=condition_tensors
                 )
 
-                codes = codes[0]
-                logits = lm_output.logits[0]
-                mask = lm_output.mask[0]
-
-                codes = one_hot_encode(codes, num_classes=2048)
+                codes = one_hot_encode_4d(codes, num_classes=2048) #[batch_size, num_codebooks, frames, num_classes]
 
                 codes = codes.cuda()
-                logits = logits.cuda()
-                mask = mask.cuda()
+                logits = logits.cuda() #[batch_size, num_codebooks, frames, num_classes]
+                mask = mask.cuda()#[batch_size, num_codebooks, frames]
 
                 mask = mask.view(-1)
                 masked_logits = logits.view(-1, 2048)[mask]
