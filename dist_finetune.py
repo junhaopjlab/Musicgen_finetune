@@ -20,38 +20,80 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 
+
+audio_ids_path = '/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/all_audio_ids.txt'
+input_dir = '/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/API'
+label_dir = '/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/split_10s'
+
+
 class MyAudioDataset(Dataset):
-    def __init__(self, data_dir, no_label=False):
-        self.data_dir = data_dir
+    def __init__(self, audio_ids_path, input_dir, label_dir):
         self.data_map = []
-
-        condition_datadir = 'MFA_corpus/'
-        label_datadir = 'split_10s/'
-
-        artist_files = os.listdir(data_dir + '/' + label_datadir)
-        for artist in artist_files:
-            song_files = os.listdir(data_dir + '/' + label_datadir + artist)
-            for song_file in song_files:
-                song_splitfiles = os.listdir(data_dir + '/' + label_datadir + artist + '/' + song_file)
-                song_splitfiles = [file for file in song_splitfiles if file.endswith(".mp3")]
-                names = [file[:-4] for file in song_splitfiles]
-                for name in names:
-                    self.data_map.append(
-                        {
-                            "audio": data_dir + '/' + condition_datadir + artist + '/' + song_file + '/' + name + '.wav',
-                            "label": data_dir + '/' + label_datadir + artist + '/' + song_file + '/' + name + '.mp3'
-                        }
-                    )
+        with open(audio_ids_path, 'r', encoding='utf-8') as file:
+            audio_ids_list = [line.strip() for line in file.readlines()]
+        for audio_id in audio_ids_list:
+            input_path = os.path.join(input_dir, audio_id+'.wav')
+            label_path = os.path.join(label_dir, audio_id +'.mp3')
+            if os.path.exists(input_path) and os.path.exists(label_path): 
+                 self.data_map.append({
+                    'audio_input':input_path,
+                    'audio_label': label_path
+                 }
+                 )
 
     def __len__(self):
         return len(self.data_map)
-
     def __getitem__(self, idx):
         data = self.data_map[idx]
-        audio = data["audio"]
-        label = data["label"]
+        audio = data["audio_input"]
+        label = data["audio_label"]
+        return audio, label      
 
-        return audio, label
+
+
+# descriptions tp.Sequence[tp.Optional[str]]
+# input_wavs torch.Tensor [B,C,T]
+# label_wavs torch.Tensor [B,C,T]
+def my_collate_fn(batch):
+    descriptions = []
+    input_wavs = []
+    label_wavs  = []
+    for (audio, label) in batch:
+        audio_input = resample_audio(audio)
+        audio_label = resample_audio(audio)
+        descriptions.append(' ')
+        input_wavs.append(audio_input)
+        label_wavs.append(audio_label)
+    input_wavs = torch.stack(input_wavs, dim=0)
+    label_wavs = torch.stack(input_wavs, dim=0)
+    return descriptions, input_wavs, label_wavs
+    
+
+
+
+
+
+
+
+    
+
+
+# class AudioDataset(Dataset):
+#     def __init__(self, data_path, use_cfg =False, text_label= False):
+#         self.data = torch.load(data_path)
+
+#     def __len__(self):
+#         return len(self.data)
+
+#     def __getitem__(self, idx):
+#         sample = self.data[idx]
+#         audio_id = sample['audio_id']
+#         audio_input = resample_audio(sample['audio_input'], sample['sr_input'])
+#         audio_label = resample_audio(sample['audio_label'], sample['sr_label'])
+#         return {'audio_id':audio_id, 'audio_input':audio_input, 'audio_label':audio_label}
+
+    
+
         
 def count_nans(tensor):
     nan_mask = torch.isnan(tensor)
@@ -59,40 +101,54 @@ def count_nans(tensor):
     return num_nans
 
 
-def preprocess_audio(audio_path, model: MusicGen, duration: int = 10):
+def resample_audio(audio_path, model: MusicGen, duration: int = 10):
     wav, sr = torchaudio.load(audio_path)
     wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
-    wav = wav.mean(dim=0, keepdim=True)
-    if wav.shape[1] < model.sample_rate * duration:
-        return None
-    end_sample = int(model.sample_rate * duration)
+    wav = wav.mean(dim=0, keepdim=True) #单声道
     start_sample = 0
-    wav = wav[:, start_sample : start_sample + end_sample]
-
-    assert wav.shape[0] == 1
-
-    wav = wav.cuda()
-    wav = wav.unsqueeze(1)
-
-    with torch.no_grad():
-        gen_audio = model.compression_model.encode(wav)
-
-    codes, scale = gen_audio
-
-    assert scale is None
-
-    return codes
-
-def preprocess_melody_wavs(audio_path, model:MusicGen, duration: int = 10):
-    wav, sr = torchaudio.load(audio_path)
-    wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
-    wav = wav.mean(dim=0, keepdim=True)
-    if wav.shape[1] < model.sample_rate * duration:
-        return None
     end_sample = int(model.sample_rate * duration)
-    start_sample = 0
+    if wav.shape[1] <  end_sample:
+        return None
     wav = wav[:, start_sample : start_sample + end_sample]
     return wav
+
+    
+
+
+# def preprocess_audio(audio_path, model: MusicGen, duration: int = 10):
+#     wav, sr = torchaudio.load(audio_path)
+#     wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
+#     wav = wav.mean(dim=0, keepdim=True)
+#     if wav.shape[1] < model.sample_rate * duration:
+#         return None
+#     end_sample = int(model.sample_rate * duration)
+#     start_sample = 0
+#     wav = wav[:, start_sample : start_sample + end_sample]
+
+#     assert wav.shape[0] == 1
+
+#     wav = wav.cuda()
+#     wav = wav.unsqueeze(1)
+
+#     with torch.no_grad():
+#         gen_audio = model.compression_model.encode(wav)
+
+#     codes, scale = gen_audio
+
+#     assert scale is None
+
+#     return codes
+
+# def preprocess_melody_wavs(audio_path, model:MusicGen, duration: int = 10):
+#     wav, sr = torchaudio.load(audio_path)
+#     wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
+#     wav = wav.mean(dim=0, keepdim=True)
+#     if wav.shape[1] < model.sample_rate * duration:
+#         return None
+#     end_sample = int(model.sample_rate * duration)
+#     start_sample = 0
+#     wav = wav[:, start_sample : start_sample + end_sample]
+#     return wav
 
 def fixnan(tensor: torch.Tensor):
     nan_mask = torch.isnan(tensor)
@@ -195,43 +251,21 @@ def train(
 
     for epoch in range(num_epochs):
         train_sampler.set_epoch(epoch)
-        for batch_idx, (audio, label) in enumerate(train_dataloader):
+        for batch_idx, (descriptions, input_wavs, label_wavs) in enumerate(train_dataloader):
             optimizer.zero_grad()
-
-            all_codes = []
-            melody_wavs = []
-            texts = []
-
-            # where audio and label are just paths
-            for melody, l in zip(audio, label):
-                inner_audio = preprocess_audio(l, model)  # returns tensor
-                melody = preprocess_melody_wavs(melody, model)
-
-                if inner_audio is None:
-                    continue
-
-                if use_cfg:
-                    codes = torch.cat([inner_audio, inner_audio], dim=0)
-                else:
-                    codes = inner_audio
-
-                all_codes.append(codes)
-                melody_wavs.append(melody)
-                texts.append("")
-
-            attributes, _ = model._prepare_tokens_and_attributes(texts, prompt=None, melody_wavs=melody_wavs)
+            attributes, _ = model._prepare_tokens_and_attributes(descriptions, prompt=None, melody_wavs=input_wavs)
             conditions = attributes
-            if use_cfg:
-                null_conditions = ClassifierFreeGuidanceDropout(p=1.0)(conditions)
-                conditions = conditions + null_conditions
+            # if use_cfg:
+            #     null_conditions = ClassifierFreeGuidanceDropout(p=1.0)(conditions)
+            #     conditions = conditions + null_conditions
             tokenized = model.lm.condition_provider.tokenize(conditions)
-            cfg_conditions = model.lm.condition_provider(tokenized)
-            condition_tensors = cfg_conditions
+            condition_tensors = model.lm.condition_provider(tokenized)
 
-            if len(all_codes) == 0:
-                continue
-
-            codes = torch.cat(all_codes, dim=0)
+            #获得label_wav的encodec code_id
+            label_wavs = label_wavs.cuda()
+            with torch.no_grad():
+                codes, scale = model.compression_model.encode(label_wavs)
+            assert scale is None
 
             with torch.autocast(device_type="cuda", dtype=torch.float16):
                 lm_output = model.lm.compute_predictions(

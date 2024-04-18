@@ -1,6 +1,6 @@
 
 
-export DATA="/mnt/petrelfs/liuzihan/music_datasets/processed_data/wandhiEN_test" #"path of data"  
+export DATA="/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh" #"/mnt/petrelfs/liuzihan/music_datasets/processed_data/wandhiEN_test" #"path of data"  
 export MODEL="/mnt/petrelfs/liuzihan/.cache/huggingface/hub/models--facebook--musicgen-melody-large/snapshots/6fdf8d3d815995108c9bdb5183414ff464b171ac"  #"model name or path"
 
 
@@ -22,4 +22,4 @@ DISTRIBUTED_ARGS="
 torchrun $DISTRIBUTED_ARGS dist_finetune.py \
     --dataset_path ${DATA} \
     --model_id ${MODEL} \
-    --epochs 2
+    --epochs 1
