@@ -204,9 +204,9 @@ def train(
     model.lm = model.lm.module 
 
 
-    dataset = MyAudioDataset(dataset_path, no_label=no_label)
+    dataset = MyAudioDataset(audio_ids_path, input_dir, label_dir)
     train_sampler = torch.utils.data.distributed.DistributedSampler(dataset)
-    train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, sampler=train_sampler)
+    train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, sampler=train_sampler,collate_fn=my_collate_fn)
 
 
     learning_rate = lr
