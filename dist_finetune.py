@@ -21,17 +21,22 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
 
 
-audio_ids_path = '/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/all_audio_ids.txt'
-input_dir = '/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/API'
-label_dir = '/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/split_10s'
+DATA_DIR = '/mnt/petrelfs/liuzihan/music_datasets/processed_data/wandhiSongs' #'/mnt/petrelfs/share_data/liuzihan/acc_dataset_zh/'
+# audio_ids_path = os.path.join( DATA_DIR, 'all_audio_ids.txt')
+# input_dir = os.path.join( DATA_DIR, 'API')
+# label_dir = os.path.join( DATA_DIR, 'split_10s')
 
 
 class MyAudioDataset(Dataset):
-    def __init__(self, audio_ids_path, input_dir, label_dir):
+    def __init__(self, data_dir, sample_rate):
         self.data_map = []
+        self.sample_rate = sample_rate
+        audio_ids_path = os.path.join( DATA_DIR, 'all_audio_ids.txt')
+        input_dir = os.path.join( DATA_DIR, 'API')
+        label_dir = os.path.join( DATA_DIR, 'split_10s')
         with open(audio_ids_path, 'r', encoding='utf-8') as file:
             audio_ids_list = [line.strip() for line in file.readlines()]
-        for audio_id in audio_ids_list:
+        for audio_id in audio_ids_list[:100]:
             input_path = os.path.join(input_dir, audio_id+'.wav')
             label_path = os.path.join(label_dir, audio_id +'.mp3')
             if os.path.exists(input_path) and os.path.exists(label_path): 
@@ -47,7 +52,7 @@ class MyAudioDataset(Dataset):
         data = self.data_map[idx]
         audio = data["audio_input"]
         label = data["audio_label"]
-        return audio, label      
+        return audio, label , self.sample_rate    
 
 
 
@@ -58,14 +63,16 @@ def my_collate_fn(batch):
     descriptions = []
     input_wavs = []
     label_wavs  = []
-    for (audio, label) in batch:
-        audio_input = resample_audio(audio)
-        audio_label = resample_audio(audio)
-        descriptions.append(' ')
+    for (audio, label, sr) in batch:
+        audio_input = resample_audio(audio, sr)
+        audio_label = resample_audio(label, sr)
+        if audio_input is None or audio_label is None:
+            continue
+        descriptions.append('')
         input_wavs.append(audio_input)
         label_wavs.append(audio_label)
     input_wavs = torch.stack(input_wavs, dim=0)
-    label_wavs = torch.stack(input_wavs, dim=0)
+    label_wavs = torch.stack(label_wavs, dim=0)
     return descriptions, input_wavs, label_wavs
     
 
@@ -101,12 +108,12 @@ def count_nans(tensor):
     return num_nans
 
 
-def resample_audio(audio_path, model: MusicGen, duration: int = 10):
+def resample_audio(audio_path, sample_rate, duration: int = 10):
     wav, sr = torchaudio.load(audio_path)
-    wav = torchaudio.functional.resample(wav, sr, model.sample_rate)
+    wav = torchaudio.functional.resample(wav, sr, sample_rate)
     wav = wav.mean(dim=0, keepdim=True) #单声道
     start_sample = 0
-    end_sample = int(model.sample_rate * duration)
+    end_sample = int(sample_rate * duration)
     if wav.shape[1] <  end_sample:
         return None
     wav = wav[:, start_sample : start_sample + end_sample]
@@ -204,7 +211,7 @@ def train(
     model.lm = model.lm.module 
 
 
-    dataset = MyAudioDataset(audio_ids_path, input_dir, label_dir)
+    dataset = MyAudioDataset(DATA_DIR, model.sample_rate)
     train_sampler = torch.utils.data.distributed.DistributedSampler(dataset)
     train_dataloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers, sampler=train_sampler,collate_fn=my_collate_fn)
 
