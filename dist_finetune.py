@@ -36,7 +36,7 @@ class MyAudioDataset(Dataset):
         label_dir = os.path.join( DATA_DIR, 'split_10s')
         with open(audio_ids_path, 'r', encoding='utf-8') as file:
             audio_ids_list = [line.strip() for line in file.readlines()]
-        for audio_id in audio_ids_list:
+        for audio_id in audio_ids_list[:100]:
             input_path = os.path.join(input_dir, audio_id+'.wav')
             label_path = os.path.join(label_dir, audio_id +'.mp3')
             if os.path.exists(input_path) and os.path.exists(label_path): 
@@ -293,12 +293,12 @@ def train(
                 codes = one_hot_encode_4d(codes, num_classes=2048) #[batch_size, num_codebooks, frames, num_classes]
 
                 codes = codes.cuda()
-                logits = logits.cuda() #[batch_size, num_codebooks, frames, num_classes]
-                mask = mask.cuda()#[batch_size, num_codebooks, frames]
+                logits = lm_output.logits.cuda() #[batch_size, num_codebooks, frames, num_classes]
+                mask = lm_output.mask.cuda()#[batch_size, num_codebooks, frames]
 
-                mask = mask.view(-1)
-                masked_logits = logits.view(-1, 2048)[mask]
-                masked_codes = codes.view(-1, 2048)[mask]
+                mask = mask.reshape(-1)
+                masked_logits = logits.reshape(-1, 2048)[mask]
+                masked_codes = codes.reshape(-1, 2048)[mask]
 
                 loss = criterion(masked_logits, masked_codes)
 
