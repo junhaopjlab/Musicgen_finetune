@@ -1,0 +1,50 @@
+wandb_version: 1
+
+model_id:
+  desc: null
+  value: /mnt/petrelfs/liuzihan/.cache/huggingface/hub/models--facebook--musicgen-melody-large/snapshots/6fdf8d3d815995108c9bdb5183414ff464b171ac
+dataset:
+  desc: null
+  value: /mnt/petrelfs/liuzihan/music_datasets/processed_data/wandhiSongs
+lr:
+  desc: null
+  value: 1.0e-05
+batch_size:
+  desc: null
+  value: 64
+epochs:
+  desc: null
+  value: 5
+warmup_steps:
+  desc: null
+  value: 200
+_wandb:
+  desc: null
+  value:
+    python_version: 3.9.18
+    cli_version: 0.16.6
+    framework: huggingface
+    huggingface_version: 4.40.0.dev0
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1713539055.0
+    t:
+      1:
+      - 1
+      - 11
+      - 33
+      - 49
+      - 50
+      - 53
+      - 55
+      - 105
+      3:
+      - 13
+      - 16
+      - 23
+      4: 3.9.18
+      5: 0.16.6
+      6: 4.40.0.dev0
+      8:
+      - 5
+      13: linux-x86_64

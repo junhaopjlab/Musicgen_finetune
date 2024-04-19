@@ -1,0 +1,27 @@
+2024-04-19 23:04:15,498 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Current SDK version is 0.16.6
+2024-04-19 23:04:15,501 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Configure stats pid to 407508
+2024-04-19 23:04:15,503 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Loading settings from /mnt/petrelfs/liuzihan/.config/wandb/settings
+2024-04-19 23:04:15,504 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Loading settings from /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/settings
+2024-04-19 23:04:15,506 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2024-04-19 23:04:15,508 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'dist_finetune.py', 'program_abspath': '/mnt/petrelfs/liuzihan/Musicgen_finetune/dist_finetune.py', 'program': '/mnt/petrelfs/liuzihan/Musicgen_finetune/dist_finetune.py'}
+2024-04-19 23:04:15,510 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Applying login settings: {}
+2024-04-19 23:04:15,511 INFO    MainThread:407508 [wandb_setup.py:_flush():76] Applying login settings: {}
+2024-04-19 23:04:15,513 INFO    MainThread:407508 [wandb_init.py:_log_setup():521] Logging user logs to /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/run-20240419_230415-lvzshotl/logs/debug.log
+2024-04-19 23:04:15,515 INFO    MainThread:407508 [wandb_init.py:_log_setup():522] Logging internal logs to /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/run-20240419_230415-lvzshotl/logs/debug-internal.log
+2024-04-19 23:04:15,517 INFO    MainThread:407508 [wandb_init.py:init():561] calling init triggers
+2024-04-19 23:04:15,519 INFO    MainThread:407508 [wandb_init.py:init():568] wandb.init called with sweep_config: {}
+config: {'model_id': '/mnt/petrelfs/liuzihan/.cache/huggingface/hub/models--facebook--musicgen-melody-large/snapshots/6fdf8d3d815995108c9bdb5183414ff464b171ac', 'dataset': '/mnt/petrelfs/liuzihan/music_datasets/processed_data/wandhiSongs', 'lr': 1e-05, 'batch_size': 64, 'epochs': 5, 'warmup_steps': 200}
+2024-04-19 23:04:15,521 INFO    MainThread:407508 [wandb_init.py:init():611] starting backend
+2024-04-19 23:04:15,522 INFO    MainThread:407508 [wandb_init.py:init():615] setting up manager
+2024-04-19 23:04:15,527 INFO    MainThread:407508 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-04-19 23:04:15,545 INFO    MainThread:407508 [wandb_init.py:init():623] backend started and connected
+2024-04-19 23:04:15,554 INFO    MainThread:407508 [wandb_init.py:init():715] updated telemetry
+2024-04-19 23:04:15,691 INFO    MainThread:407508 [wandb_init.py:init():748] communicating run to backend with 90.0 second timeout
+2024-04-19 23:04:16,417 INFO    MainThread:407508 [wandb_run.py:_on_init():2357] communicating current version
+2024-04-19 23:04:16,612 INFO    MainThread:407508 [wandb_run.py:_on_init():2366] got version response 
+2024-04-19 23:04:16,614 INFO    MainThread:407508 [wandb_init.py:init():799] starting run threads in backend
+2024-04-19 23:04:18,781 INFO    MainThread:407508 [wandb_run.py:_console_start():2335] atexit reg
+2024-04-19 23:04:18,783 INFO    MainThread:407508 [wandb_run.py:_redirect():2190] redirect: wrap_raw
+2024-04-19 23:04:18,785 INFO    MainThread:407508 [wandb_run.py:_redirect():2255] Wrapping output streams.
+2024-04-19 23:04:18,786 INFO    MainThread:407508 [wandb_run.py:_redirect():2280] Redirects installed.
+2024-04-19 23:04:18,790 INFO    MainThread:407508 [wandb_init.py:init():842] run started, returning control to user process
