@@ -53,3 +53,31 @@ PermissionError: [Errno 13] Permission denied: 'conda'
 2024-04-19 23:04:19,389 INFO    Thread-12 :408112 [dir_watcher.py:_on_file_created():271] file/dir created: /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/run-20240419_230415-lvzshotl/files/requirements.txt
 2024-04-19 23:04:21,095 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
 2024-04-19 23:04:26,095 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:04:31,096 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:04:33,415 INFO    Thread-12 :408112 [dir_watcher.py:_on_file_created():271] file/dir created: /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/run-20240419_230415-lvzshotl/files/output.log
+2024-04-19 23:04:33,781 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: stop_status
+2024-04-19 23:04:33,782 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: internal_messages
+2024-04-19 23:04:33,782 DEBUG   SenderThread:408112 [sender.py:send_request():406] send_request: stop_status
+2024-04-19 23:04:35,421 INFO    Thread-12 :408112 [dir_watcher.py:_on_file_modified():288] file/dir modified: /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/run-20240419_230415-lvzshotl/files/output.log
+2024-04-19 23:04:37,001 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:04:42,002 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:04:47,005 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:04:47,444 INFO    Thread-12 :408112 [dir_watcher.py:_on_file_modified():288] file/dir modified: /mnt/petrelfs/liuzihan/Musicgen_finetune/wandb/run-20240419_230415-lvzshotl/files/config.yaml
+2024-04-19 23:04:48,781 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: stop_status
+2024-04-19 23:04:48,782 DEBUG   SenderThread:408112 [sender.py:send_request():406] send_request: stop_status
+2024-04-19 23:04:48,820 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: internal_messages
+2024-04-19 23:04:53,136 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:04:58,136 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:05:03,137 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:05:03,781 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: stop_status
+2024-04-19 23:05:03,782 DEBUG   SenderThread:408112 [sender.py:send_request():406] send_request: stop_status
+2024-04-19 23:05:03,821 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: internal_messages
+2024-04-19 23:05:09,127 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:05:14,128 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:05:16,672 DEBUG   SystemMonitor:408112 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2024-04-19 23:05:16,675 DEBUG   SenderThread:408112 [sender.py:send():379] send: stats
+2024-04-19 23:05:18,781 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: stop_status
+2024-04-19 23:05:18,782 DEBUG   SenderThread:408112 [sender.py:send_request():406] send_request: stop_status
+2024-04-19 23:05:18,820 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: internal_messages
+2024-04-19 23:05:20,075 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
+2024-04-19 23:05:25,076 DEBUG   HandlerThread:408112 [handler.py:handle_request():146] handle_request: status_report
